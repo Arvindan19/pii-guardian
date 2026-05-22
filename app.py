@@ -45,25 +45,55 @@ analyzer, anonymizer = load_engines()
 
 # ── Column mode faker types ────────────────────────────────────────────────────
 COLUMN_FAKER_OPTIONS = {
-    "Full name":         fake.name,
-    "First name":        fake.first_name,
-    "Last name":         fake.last_name,
-    "Email":             fake.email,
-    "Phone number":      fake.phone_number,
-    "Date of birth":     fake.date_of_birth,
-    "Date":              fake.date,
-    "Address":           fake.address,
-    "City":              fake.city,
-    "Country":           fake.country,
-    "Postcode / ZIP":    fake.postcode,
-    "Company":           fake.company,
-    "Job title":         fake.job,
-    "Username":          fake.user_name,
-    "Credit card":       fake.credit_card_number,
-    "SSN / NRP":         fake.ssn,
-    "ID number":         lambda: str(fake.random_number(digits=8)),
-    "Random number":     lambda: str(fake.random_number()),
-    "Keep original":     None,
+    # ── Student identity ──────────────────────────────────────────────────────
+    "Student ID":         lambda: "490" + str(fake.random_int(min=100000, max=999999)),
+    "Full name":          fake.name,
+    "Preferred name":     fake.first_name,
+    "First name":         fake.first_name,
+    "Last name":          fake.last_name,
+    "Date of birth":      fake.date_of_birth,
+    "Gender":             lambda: fake.random_element(["Male", "Female", "Non-binary", "Prefer not to say"]),
+    "Student email":      lambda: f"{fake.first_name().lower()}.{fake.last_name().lower()}@student.edu.au",
+    "Personal email":     fake.email,
+    "Phone":              fake.phone_number,
+    # ── Address ───────────────────────────────────────────────────────────────
+    "Home address":       fake.address,
+    "Street":             fake.street_address,
+    "City":               fake.city,
+    "State":              lambda: fake.random_element(["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"]),
+    "Postcode":           fake.postcode,
+    "Country":            fake.country,
+    "Nationality":        lambda: fake.random_element(["Australian", "Chinese", "Indian", "British", "Vietnamese", "South Korean", "Nepalese", "Indonesian", "Bangladeshi", "Malaysian"]),
+    "Visa type":          lambda: fake.random_element(["Student Visa (500)", "Permanent Resident", "Australian Citizen", "Working Holiday (417)", "Skilled (189)", "Graduate (485)"]),
+    # ── Academic ──────────────────────────────────────────────────────────────
+    "Unit code":          lambda: fake.lexify("????", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ") + fake.numerify("####"),
+    "Unit name":          lambda: fake.random_element(["Introduction to Programming", "Data Structures and Algorithms", "Calculus I", "Microeconomics", "Business Ethics", "Organic Chemistry", "Financial Accounting", "Machine Learning", "Corporate Law", "Human Anatomy", "Statistics for Business", "Software Engineering"]),
+    "Grade (HD/D/CR/P/F)": lambda: fake.random_element(["HD", "D", "CR", "P", "F"]),
+    "Mark (0-100)":       lambda: str(fake.random_int(min=0, max=100)),
+    "WAM":                lambda: str(round(fake.pyfloat(min_value=50.0, max_value=100.0, right_digits=2), 2)),
+    "GPA":                lambda: str(round(fake.pyfloat(min_value=1.0, max_value=7.0, right_digits=2), 2)),
+    "Enrolment status":   lambda: fake.random_element(["Enrolled", "Withdrawn", "Deferred", "Completed", "Suspended"]),
+    "Study mode":         lambda: fake.random_element(["Full-time", "Part-time", "Online", "Mixed"]),
+    "Campus":             lambda: fake.random_element(["City Campus", "Parramatta Campus", "Penrith Campus", "Online"]),
+    "Faculty":            lambda: fake.random_element(["Faculty of Engineering", "Faculty of Business", "Faculty of Science", "Faculty of Arts", "Faculty of Health", "Faculty of Law"]),
+    "Course code":        lambda: fake.lexify("???", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ") + fake.numerify("####"),
+    "Course name":        lambda: fake.random_element(["Bachelor of Computer Science", "Bachelor of Business", "Bachelor of Engineering", "Bachelor of Nursing", "Master of Data Science", "Bachelor of Laws", "Bachelor of Arts", "Bachelor of Psychology"]),
+    "Year of study":      lambda: str(fake.random_int(min=1, max=5)),
+    "Teaching period":    lambda: fake.random_element(["Autumn 2024", "Spring 2024", "Summer A 2024", "Summer B 2024", "Autumn 2025", "Spring 2025"]),
+    # ── Staff ─────────────────────────────────────────────────────────────────
+    "Staff ID":           lambda: "E" + fake.numerify("######"),
+    "Department":         lambda: fake.random_element(["School of Computing", "School of Business", "School of Engineering", "Department of Mathematics", "Department of Psychology", "School of Nursing"]),
+    "Position":           lambda: fake.random_element(["Lecturer", "Senior Lecturer", "Associate Professor", "Professor", "Tutor", "Research Assistant", "Unit Coordinator"]),
+    "Employment type":    lambda: fake.random_element(["Full-time", "Part-time", "Casual", "Contract"]),
+    # ── Financial ─────────────────────────────────────────────────────────────
+    "TFN":                lambda: fake.numerify("### ### ###"),
+    "BSB":                lambda: fake.numerify("###-###"),
+    "Bank account":       lambda: fake.numerify("########"),
+    "HECS amount":        lambda: "$" + str(fake.random_int(min=1000, max=50000)),
+    "Scholarship name":   lambda: fake.random_element(["Vice-Chancellor's Scholarship", "Merit Scholarship", "Equity Scholarship", "International Student Award", "Community Service Award", "None"]),
+    "Working with Children Check number": lambda: "WWC" + fake.numerify("#######") + fake.lexify("?", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+    # ── Meta ──────────────────────────────────────────────────────────────────
+    "Keep original":      None,
 }
 
 
@@ -358,24 +388,62 @@ with tab2:
 
         # Build default guess per column name
         def guess_faker(col_name):
-            col = col_name.lower()
-            if any(k in col for k in ["full_name", "fullname", "name"]):       return "Full name"
-            if any(k in col for k in ["first", "fname", "forename"]):          return "First name"
-            if any(k in col for k in ["last", "lname", "surname"]):            return "Last name"
-            if any(k in col for k in ["email", "mail"]):                        return "Email"
-            if any(k in col for k in ["phone", "mobile", "tel"]):              return "Phone number"
-            if any(k in col for k in ["dob", "birth", "birthday"]):            return "Date of birth"
-            if any(k in col for k in ["date"]):                                 return "Date"
-            if any(k in col for k in ["address", "street"]):                   return "Address"
-            if any(k in col for k in ["city", "town"]):                        return "City"
-            if any(k in col for k in ["country"]):                             return "Country"
-            if any(k in col for k in ["post", "zip", "postcode"]):             return "Postcode / ZIP"
-            if any(k in col for k in ["company", "org", "organisation"]):      return "Company"
-            if any(k in col for k in ["job", "title", "role", "position"]):    return "Job title"
-            if any(k in col for k in ["user", "username"]):                    return "Username"
-            if any(k in col for k in ["card", "credit"]):                      return "Credit card"
-            if any(k in col for k in ["ssn", "nrp", "national"]):              return "SSN / NRP"
-            if any(k in col for k in ["id", "ref", "number"]):                 return "ID number"
+            col = col_name.lower().replace(" ", "_").replace("-", "_")
+            # Student identity
+            if col in ("student_id", "sid", "student_number") or col.startswith("student_id"):
+                return "Student ID"
+            if any(k in col for k in ["student_email", "uni_email", "university_email"]):
+                return "Student email"
+            if any(k in col for k in ["personal_email"]):                       return "Personal email"
+            if any(k in col for k in ["preferred_name", "preferred"]):          return "Preferred name"
+            if any(k in col for k in ["full_name", "fullname"]):                return "Full name"
+            if any(k in col for k in ["first", "fname", "forename", "given"]):  return "First name"
+            if any(k in col for k in ["last", "lname", "surname", "family"]):   return "Last name"
+            if "name" in col:                                                    return "Full name"
+            if any(k in col for k in ["dob", "birth", "birthday"]):             return "Date of birth"
+            if any(k in col for k in ["gender", "sex"]):                        return "Gender"
+            if any(k in col for k in ["phone", "mobile", "tel"]):               return "Phone"
+            # Address
+            if "street" in col:                                                  return "Street"
+            if any(k in col for k in ["city", "town", "suburb"]):               return "City"
+            if "state" in col and "status" not in col and "enrolment" not in col:
+                return "State"
+            if any(k in col for k in ["postcode", "post_code", "zip"]):         return "Postcode"
+            if "country" in col:                                                 return "Country"
+            if "nationality" in col:                                             return "Nationality"
+            if "visa" in col:                                                    return "Visa type"
+            if "address" in col:                                                 return "Home address"
+            # Academic
+            if any(k in col for k in ["unit_code", "unitcode", "subject_code"]): return "Unit code"
+            if any(k in col for k in ["unit_name", "unitname", "subject_name", "subject"]): return "Unit name"
+            if col in ("wam",) or col.startswith("wam"):                         return "WAM"
+            if col in ("gpa",) or col.startswith("gpa"):                         return "GPA"
+            if "grade" in col:                                                   return "Grade (HD/D/CR/P/F)"
+            if "mark" in col or col in ("score", "final_mark", "marks"):         return "Mark (0-100)"
+            if any(k in col for k in ["enrolment", "enrollment"]):               return "Enrolment status"
+            if any(k in col for k in ["study_mode", "studymode", "mode_of_study"]): return "Study mode"
+            if "campus" in col:                                                  return "Campus"
+            if "faculty" in col:                                                 return "Faculty"
+            if any(k in col for k in ["course_code", "coursecode"]):            return "Course code"
+            if any(k in col for k in ["course_name", "coursename"]):            return "Course name"
+            if "course" in col:                                                  return "Course name"
+            if any(k in col for k in ["year_of_study", "study_year", "year_level"]): return "Year of study"
+            if any(k in col for k in ["teaching_period", "semester", "session", "term", "trimester"]): return "Teaching period"
+            # Staff
+            if any(k in col for k in ["staff_id", "staffid", "employee_id", "emp_id"]): return "Staff ID"
+            if "department" in col or col == "dept":                             return "Department"
+            if any(k in col for k in ["position", "job_title", "jobtitle"]):    return "Position"
+            if any(k in col for k in ["employment_type", "employment", "contract_type"]): return "Employment type"
+            # Financial
+            if col == "tfn" or "tax_file" in col:                               return "TFN"
+            if col == "bsb" or col.startswith("bsb"):                           return "BSB"
+            if any(k in col for k in ["bank_account", "account_number", "account_no"]): return "Bank account"
+            if any(k in col for k in ["hecs", "help_debt", "hecs_debt"]):       return "HECS amount"
+            if "scholarship" in col:                                             return "Scholarship name"
+            if any(k in col for k in ["wwc", "working_with_children"]):         return "Working with Children Check number"
+            # Fallbacks
+            if any(k in col for k in ["email", "mail"]):                        return "Personal email"
+            if any(k in col for k in ["id", "ref"]):                            return "Student ID"
             return "Keep original"
 
         col_config = {}
