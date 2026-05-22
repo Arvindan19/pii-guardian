@@ -1,6 +1,9 @@
+import random
+import string
 import streamlit as st
 import pandas as pd
 import io
+from datetime import date
 
 from faker import Faker
 from presidio_analyzer import AnalyzerEngine
@@ -93,8 +96,23 @@ COLUMN_FAKER_OPTIONS = {
     "Scholarship name":   lambda: fake.random_element(["Vice-Chancellor's Scholarship", "Merit Scholarship", "Equity Scholarship", "International Student Award", "Community Service Award", "None"]),
     "Working with Children Check number": lambda: "WWC" + fake.numerify("#######") + fake.lexify("?", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
     # ── Meta ──────────────────────────────────────────────────────────────────
+    "Custom pattern":     None,
     "Keep original":      None,
 }
+
+
+def apply_pattern(pattern: str) -> str:
+    """Replace pattern tokens: # → digit, @ → uppercase letter, YYYY/MM/DD → date parts."""
+    today = date.today()
+    result = pattern.replace("YYYY", str(today.year))
+    result = result.replace("MM", f"{today.month:02d}")
+    result = result.replace("DD", f"{today.day:02d}")
+    return "".join(
+        str(random.randint(0, 9)) if ch == "#"
+        else random.choice(string.ascii_uppercase) if ch == "@"
+        else ch
+        for ch in result
+    )
 
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -447,6 +465,7 @@ with tab2:
             return "Keep original"
 
         col_config = {}
+        col_patterns = {}
         cols_per_row = 2
         col_list = list(t2_raw.columns)
 
@@ -462,6 +481,12 @@ with tab2:
                         key=f"col_cfg_{col}",
                     )
                     col_config[col] = choice
+                    if choice == "Custom pattern":
+                        col_patterns[col] = st.text_input(
+                            "Pattern  (# = digit · @ = letter · YYYY / MM / DD = date)",
+                            key=f"col_pat_{col}",
+                            placeholder="e.g. UNIT-#### or SEM-@@##",
+                        )
 
         st.markdown("---")
 
@@ -469,9 +494,14 @@ with tab2:
         with st.expander("👀 Preview first 3 rows with your settings", expanded=False):
             preview = t2_raw.head(3).copy()
             for col, choice in col_config.items():
-                fn = COLUMN_FAKER_OPTIONS.get(choice)
-                if fn is not None:
-                    preview[col] = [fn() for _ in range(len(preview))]
+                if choice == "Custom pattern":
+                    pat = col_patterns.get(col, "")
+                    if pat:
+                        preview[col] = [apply_pattern(pat) for _ in range(len(preview))]
+                else:
+                    fn = COLUMN_FAKER_OPTIONS.get(choice)
+                    if fn is not None:
+                        preview[col] = [fn() for _ in range(len(preview))]
             st.dataframe(preview, use_container_width=True)
 
         if st.button("🎯 Anonymise by Column", type="primary", use_container_width=True):
@@ -479,7 +509,14 @@ with tab2:
             t2_log   = {}  # fake_cell -> original_cell per affected cell
 
             bar2 = st.progress(0, text="Anonymising…")
-            active_cols = [(c, COLUMN_FAKER_OPTIONS[v]) for c, v in col_config.items() if COLUMN_FAKER_OPTIONS[v] is not None]
+            active_cols = []
+            for c, v in col_config.items():
+                if v == "Custom pattern":
+                    pat = col_patterns.get(c, "")
+                    if pat:
+                        active_cols.append((c, lambda p=pat: apply_pattern(p)))
+                elif COLUMN_FAKER_OPTIONS[v] is not None:
+                    active_cols.append((c, COLUMN_FAKER_OPTIONS[v]))
 
             for idx, (col, fn) in enumerate(active_cols):
                 for row_idx in t2_raw.index:
