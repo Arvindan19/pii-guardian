@@ -1,9 +1,11 @@
+import io
 import random
 import string
+import zipfile
+from datetime import date
+
 import streamlit as st
 import pandas as pd
-import io
-from datetime import date
 
 from faker import Faker
 from presidio_analyzer import AnalyzerEngine
@@ -46,56 +48,51 @@ def load_engines():
 analyzer, anonymizer = load_engines()
 
 
-# ── Column mode faker types ────────────────────────────────────────────────────
+# ── Column mode faker types (alphabetical; Custom pattern + Keep original pinned last) ──
 COLUMN_FAKER_OPTIONS = {
-    # ── Student identity ──────────────────────────────────────────────────────
-    "Student ID":         lambda: "490" + str(fake.random_int(min=100000, max=999999)),
-    "Full name":          fake.name,
-    "Preferred name":     fake.first_name,
-    "First name":         fake.first_name,
-    "Last name":          fake.last_name,
-    "Date of birth":      fake.date_of_birth,
-    "Gender":             lambda: fake.random_element(["Male", "Female", "Non-binary", "Prefer not to say"]),
-    "Student email":      lambda: f"{fake.first_name().lower()}.{fake.last_name().lower()}@student.edu.au",
-    "Personal email":     fake.email,
-    "Phone":              fake.phone_number,
-    # ── Address ───────────────────────────────────────────────────────────────
-    "Home address":       fake.address,
-    "Street":             fake.street_address,
-    "City":               fake.city,
-    "State":              lambda: fake.random_element(["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"]),
-    "Postcode":           fake.postcode,
-    "Country":            fake.country,
-    "Nationality":        lambda: fake.random_element(["Australian", "Chinese", "Indian", "British", "Vietnamese", "South Korean", "Nepalese", "Indonesian", "Bangladeshi", "Malaysian"]),
-    "Visa type":          lambda: fake.random_element(["Student Visa (500)", "Permanent Resident", "Australian Citizen", "Working Holiday (417)", "Skilled (189)", "Graduate (485)"]),
-    # ── Academic ──────────────────────────────────────────────────────────────
-    "Unit code":          lambda: fake.lexify("????", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ") + fake.numerify("####"),
-    "Unit name":          lambda: fake.random_element(["Introduction to Programming", "Data Structures and Algorithms", "Calculus I", "Microeconomics", "Business Ethics", "Organic Chemistry", "Financial Accounting", "Machine Learning", "Corporate Law", "Human Anatomy", "Statistics for Business", "Software Engineering"]),
-    "Grade (HD/D/CR/P/F)": lambda: fake.random_element(["HD", "D", "CR", "P", "F"]),
-    "Mark (0-100)":       lambda: str(fake.random_int(min=0, max=100)),
-    "WAM":                lambda: str(round(fake.pyfloat(min_value=50.0, max_value=100.0, right_digits=2), 2)),
-    "GPA":                lambda: str(round(fake.pyfloat(min_value=1.0, max_value=7.0, right_digits=2), 2)),
-    "Enrolment status":   lambda: fake.random_element(["Enrolled", "Withdrawn", "Deferred", "Completed", "Suspended"]),
-    "Study mode":         lambda: fake.random_element(["Full-time", "Part-time", "Online", "Mixed"]),
+    "Bank account":       lambda: fake.numerify("########"),
+    "BSB":                lambda: fake.numerify("###-###"),
     "Campus":             lambda: fake.random_element(["City Campus", "Parramatta Campus", "Penrith Campus", "Online"]),
-    "Faculty":            lambda: fake.random_element(["Faculty of Engineering", "Faculty of Business", "Faculty of Science", "Faculty of Arts", "Faculty of Health", "Faculty of Law"]),
+    "City":               fake.city,
+    "Country":            fake.country,
     "Course code":        lambda: fake.lexify("???", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ") + fake.numerify("####"),
     "Course name":        lambda: fake.random_element(["Bachelor of Computer Science", "Bachelor of Business", "Bachelor of Engineering", "Bachelor of Nursing", "Master of Data Science", "Bachelor of Laws", "Bachelor of Arts", "Bachelor of Psychology"]),
-    "Year of study":      lambda: str(fake.random_int(min=1, max=5)),
-    "Teaching period":    lambda: fake.random_element(["Autumn 2024", "Spring 2024", "Summer A 2024", "Summer B 2024", "Autumn 2025", "Spring 2025"]),
-    # ── Staff ─────────────────────────────────────────────────────────────────
-    "Staff ID":           lambda: "E" + fake.numerify("######"),
+    "Date of birth":      fake.date_of_birth,
     "Department":         lambda: fake.random_element(["School of Computing", "School of Business", "School of Engineering", "Department of Mathematics", "Department of Psychology", "School of Nursing"]),
-    "Position":           lambda: fake.random_element(["Lecturer", "Senior Lecturer", "Associate Professor", "Professor", "Tutor", "Research Assistant", "Unit Coordinator"]),
     "Employment type":    lambda: fake.random_element(["Full-time", "Part-time", "Casual", "Contract"]),
-    # ── Financial ─────────────────────────────────────────────────────────────
-    "TFN":                lambda: fake.numerify("### ### ###"),
-    "BSB":                lambda: fake.numerify("###-###"),
-    "Bank account":       lambda: fake.numerify("########"),
+    "Enrolment status":   lambda: fake.random_element(["Enrolled", "Withdrawn", "Deferred", "Completed", "Suspended"]),
+    "Faculty":            lambda: fake.random_element(["Faculty of Engineering", "Faculty of Business", "Faculty of Science", "Faculty of Arts", "Faculty of Health", "Faculty of Law"]),
+    "First name":         fake.first_name,
+    "Full name":          fake.name,
+    "Gender":             lambda: fake.random_element(["Male", "Female", "Non-binary", "Prefer not to say"]),
+    "GPA":                lambda: str(round(fake.pyfloat(min_value=1.0, max_value=7.0, right_digits=2), 2)),
+    "Grade (HD/D/CR/P/F)": lambda: fake.random_element(["HD", "D", "CR", "P", "F"]),
     "HECS amount":        lambda: "$" + str(fake.random_int(min=1000, max=50000)),
+    "Home address":       fake.address,
+    "Last name":          fake.last_name,
+    "Mark (0-100)":       lambda: str(fake.random_int(min=0, max=100)),
+    "Nationality":        lambda: fake.random_element(["Australian", "Chinese", "Indian", "British", "Vietnamese", "South Korean", "Nepalese", "Indonesian", "Bangladeshi", "Malaysian"]),
+    "Personal email":     fake.email,
+    "Phone":              fake.phone_number,
+    "Position":           lambda: fake.random_element(["Lecturer", "Senior Lecturer", "Associate Professor", "Professor", "Tutor", "Research Assistant", "Unit Coordinator"]),
+    "Postcode":           fake.postcode,
+    "Preferred name":     fake.first_name,
     "Scholarship name":   lambda: fake.random_element(["Vice-Chancellor's Scholarship", "Merit Scholarship", "Equity Scholarship", "International Student Award", "Community Service Award", "None"]),
+    "Staff ID":           lambda: "E" + fake.numerify("######"),
+    "State":              lambda: fake.random_element(["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"]),
+    "Street":             fake.street_address,
+    "Student email":      lambda: f"{fake.first_name().lower()}.{fake.last_name().lower()}@student.edu.au",
+    "Student ID":         lambda: "490" + str(fake.random_int(min=100000, max=999999)),
+    "Study mode":         lambda: fake.random_element(["Full-time", "Part-time", "Online", "Mixed"]),
+    "Teaching period":    lambda: fake.random_element(["Autumn 2024", "Spring 2024", "Summer A 2024", "Summer B 2024", "Autumn 2025", "Spring 2025"]),
+    "TFN":                lambda: fake.numerify("### ### ###"),
+    "Unit code":          lambda: fake.lexify("????", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ") + fake.numerify("####"),
+    "Unit name":          lambda: fake.random_element(["Introduction to Programming", "Data Structures and Algorithms", "Calculus I", "Microeconomics", "Business Ethics", "Organic Chemistry", "Financial Accounting", "Machine Learning", "Corporate Law", "Human Anatomy", "Statistics for Business", "Software Engineering"]),
+    "Visa type":          lambda: fake.random_element(["Student Visa (500)", "Permanent Resident", "Australian Citizen", "Working Holiday (417)", "Skilled (189)", "Graduate (485)"]),
+    "WAM":                lambda: str(round(fake.pyfloat(min_value=50.0, max_value=100.0, right_digits=2), 2)),
     "Working with Children Check number": lambda: "WWC" + fake.numerify("#######") + fake.lexify("?", letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-    # ── Meta ──────────────────────────────────────────────────────────────────
+    "Year of study":      lambda: str(fake.random_int(min=1, max=5)),
+    # ── Pinned at bottom ──────────────────────────────────────────────────────
     "Custom pattern":     None,
     "Keep original":      None,
 }
@@ -219,8 +216,22 @@ def df_to_xlsx_bytes(df):
     return buf.getvalue()
 
 
+def dfs_to_zip_bytes(clean_df, log_df, raw_df, base_name, fmt="CSV"):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        if fmt == "CSV":
+            zf.writestr(f"fake_{base_name}.csv",     df_to_csv_bytes(clean_df))
+            zf.writestr(f"lookup_{base_name}.csv",   df_to_csv_bytes(log_df))
+            zf.writestr(f"original_{base_name}.csv", df_to_csv_bytes(raw_df))
+        else:
+            zf.writestr(f"fake_{base_name}.xlsx",     df_to_xlsx_bytes(clean_df))
+            zf.writestr(f"lookup_{base_name}.csv",    df_to_csv_bytes(log_df))
+            zf.writestr(f"original_{base_name}.xlsx", df_to_xlsx_bytes(raw_df))
+    return buf.getvalue()
+
+
 def download_buttons(clean_df, log_df, raw_df, base_name):
-    """Render the three download buttons with both CSV and XLSX options."""
+    """Render download buttons (individual + ZIP) with CSV/XLSX toggle."""
     is_xlsx = base_name.lower().endswith((".xlsx", ".xls"))
 
     st.markdown("---")
@@ -260,6 +271,15 @@ def download_buttons(clean_df, log_df, raw_df, base_name):
                 f"original_{base_name}.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True)
+
+    st.download_button(
+        "📦 Download all as ZIP",
+        dfs_to_zip_bytes(clean_df, log_df, raw_df, base_name, out_fmt),
+        f"pii_guardian_{base_name}.zip",
+        "application/zip",
+        use_container_width=True,
+        key=f"zip_{base_name}",
+    )
 
 
 def relink(fake_df, lookup_df):
@@ -382,6 +402,8 @@ with tab2:
     )
 
     if t2_upload is None:
+        st.session_state.pop("t2_results", None)
+        st.session_state.pop("t2_last_file", None)
         st.info("Upload a file to get started.", icon="📂")
     else:
         t2_result, t2_err = read_file(t2_upload)
@@ -393,6 +415,10 @@ with tab2:
             t2_raw = t2_result.parse(t2_sheet, dtype=str)
         else:
             t2_raw = t2_result
+
+        if t2_upload.name != st.session_state.get("t2_last_file"):
+            st.session_state["t2_last_file"] = t2_upload.name
+            st.session_state.pop("t2_results", None)
 
         st.success(f"Loaded **{t2_raw.shape[0]} rows × {t2_raw.shape[1]} columns**")
         with st.expander("👀 Raw data preview", expanded=False):
@@ -506,7 +532,7 @@ with tab2:
 
         if st.button("🎯 Anonymise by Column", type="primary", use_container_width=True):
             t2_clean = t2_raw.copy()
-            t2_log   = {}  # fake_cell -> original_cell per affected cell
+            t2_log   = {}
 
             bar2 = st.progress(0, text="Anonymising…")
             active_cols = []
@@ -524,35 +550,38 @@ with tab2:
                     faked    = fn()
                     t2_clean.at[row_idx, col] = faked
                     t2_log[faked] = original
-
                 bar2.progress((idx + 1) / len(active_cols), text=f"Anonymising column **{col}**…")
 
             bar2.empty()
 
-            changed_cols = len(active_cols)
-            st.success(f"✅ Anonymised **{changed_cols}** column(s) across **{len(t2_raw)}** rows.")
+            st.session_state["t2_results"] = {
+                "clean":  t2_clean,
+                "log":    pd.DataFrame([{"fake_value": fv, "original_value": ov} for fv, ov in t2_log.items()]),
+                "raw":    t2_raw,
+                "base":   t2_upload.name.rsplit(".", 1)[0],
+                "n_cols": len(active_cols),
+            }
+
+        if "t2_results" in st.session_state:
+            res = st.session_state["t2_results"]
+            st.success(f"✅ Anonymised **{res['n_cols']}** column(s) across **{len(res['raw'])}** rows.")
 
             st.markdown("---")
             st.subheader("📋 Before vs After")
             cl, cr = st.columns(2)
             with cl:
                 st.markdown("**🔴 Original**")
-                st.dataframe(t2_raw, use_container_width=True, height=400)
+                st.dataframe(res["raw"], use_container_width=True, height=400)
             with cr:
                 st.markdown("**🟢 Anonymised**")
-                st.dataframe(t2_clean, use_container_width=True, height=400)
-
-            t2_log_df = pd.DataFrame([
-                {"fake_value": fv, "original_value": ov} for fv, ov in t2_log.items()
-            ])
+                st.dataframe(res["clean"], use_container_width=True, height=400)
 
             st.markdown("---")
             st.subheader("🔑 Lookup Table")
             st.caption("Keep this private — upload it in the Re-link tab to restore originals.")
-            st.dataframe(t2_log_df, use_container_width=True)
+            st.dataframe(res["log"], use_container_width=True)
 
-            t2_base = t2_upload.name.rsplit(".", 1)[0]
-            download_buttons(t2_clean, t2_log_df, t2_raw, t2_base)
+            download_buttons(res["clean"], res["log"], res["raw"], res["base"])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
