@@ -7,3 +7,6 @@
 # Old app versions
 app_v1.py
 app_anon.py
+
+# Installers
+*.exe
