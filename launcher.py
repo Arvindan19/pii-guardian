@@ -12,6 +12,10 @@ def resource_path(relative_path):
 
 
 if __name__ == '__main__':
+    os.environ['STREAMLIT_GLOBAL_DEVELOPMENT_MODE'] = 'false'
+    os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+    os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
+
     app_path = resource_path('app.py')
     sys.argv = ['streamlit', 'run', app_path, '--server.port=8501']
     from streamlit.web import cli as stcli
