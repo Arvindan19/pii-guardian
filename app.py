@@ -530,6 +530,12 @@ with tab2:
                         preview[col] = [fn() for _ in range(len(preview))]
             st.dataframe(preview, use_container_width=True)
 
+        cb_col, hint_col = st.columns([2, 5])
+        with cb_col:
+            consistent_sub = st.checkbox("Consistent substitution", value=True, key="t2_consistent")
+        with hint_col:
+            st.caption("Same value always gets same fake replacement — keeps data usable for grouping and analysis")
+
         if st.button("🎯 Anonymise by Column", type="primary", use_container_width=True):
             t2_clean = t2_raw.copy()
             t2_log   = {}
@@ -545,9 +551,15 @@ with tab2:
                     active_cols.append((c, COLUMN_FAKER_OPTIONS[v]))
 
             for idx, (col, fn) in enumerate(active_cols):
+                value_cache = {}
                 for row_idx in t2_raw.index:
                     original = str(t2_raw.at[row_idx, col])
-                    faked    = fn()
+                    if consistent_sub:
+                        if original not in value_cache:
+                            value_cache[original] = fn()
+                        faked = value_cache[original]
+                    else:
+                        faked = fn()
                     t2_clean.at[row_idx, col] = faked
                     t2_log[faked] = original
                 bar2.progress((idx + 1) / len(active_cols), text=f"Anonymising column **{col}**…")
