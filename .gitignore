@@ -10,3 +10,8 @@ app_anon.py
 
 # Installers
 *.exe
+
+# PyInstaller build output
+dist/
+build/
+*.spec
